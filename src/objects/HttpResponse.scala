@@ -7,8 +7,9 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 class HttpResponse(val uri: URI, val protocolVersion: String, val sock: Socket) {
+  private val _builder: StringBuilder = new StringBuilder
+  private var _frozen: Boolean = false
   private var _statusCode: Int = HttpStatus.ok
-  private var _body: String = ""
 
   val headers: HttpHeaders = HttpHeaders.defaultResponseHeaders(protocolVersion)
 
@@ -22,11 +23,11 @@ class HttpResponse(val uri: URI, val protocolVersion: String, val sock: Socket) 
   }
 
   def send(): Future[Unit] = {
-    _checkMutable()
+    _checkMutable(/* freeze before spawning thread */ true)
 
     Future {
       val output = new BufferedOutputStream(sock.getOutputStream)
-      val msg = _body.getBytes
+      val msg = _builder.toString.getBytes
 
       // Set content length
       headers.contentLength = msg.length
@@ -36,7 +37,7 @@ class HttpResponse(val uri: URI, val protocolVersion: String, val sock: Socket) 
       _writeHeader(output)
 
       // Write body
-      output.write(_body.getBytes)
+      output.write(msg)
 
       output.flush()
     }
@@ -46,13 +47,14 @@ class HttpResponse(val uri: URI, val protocolVersion: String, val sock: Socket) 
     _checkMutable()
 
     // TODO: Encoding stuff here
-    _body += content.toString
+    _builder.append(content.toString)
   }
 
-  private def _checkMutable(): Unit = {
-    if (headers.fini) {
+  private def _checkMutable(freeze: Boolean = false): Unit = {
+    if (_frozen) {
       throw new StateException("Response is frozen at this time")
     }
+    _frozen |= freeze
   }
 
   private def _writeHeader(output: OutputStream): Unit = {

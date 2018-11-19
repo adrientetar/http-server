@@ -34,10 +34,8 @@ object HttpHeaders {
 }
 
 class HttpHeaders(val protocolVersion: String) {
-  private var _fini = false
+  private var _frozen = false
   private val _headers = new mutable.HashMap[String, String]()
-
-  private[objects] def fini = _fini
 
   def contentLength: Int = {
     value(HttpHeaders.contentTypeHeader) match {
@@ -90,13 +88,13 @@ class HttpHeaders(val protocolVersion: String) {
   }
 
   private def _checkMutable(): Unit = {
-    if (_fini) {
+    if (_frozen) {
       throw new StateException("Headers are frozen at this time")
     }
   }
 
   private[objects] def _finalize(): Unit = {
-    _fini = true
+    _frozen = true
   }
 
   override def toString: String = {
