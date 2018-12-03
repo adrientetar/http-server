@@ -13,6 +13,16 @@ object ContentType extends Enumeration {
   val html = Value("text/html; charset=utf-8")
   val json = Value("application/json; charset=utf-8")
   val text = Value("text/plain; charset=utf-8")
+
+  def mimeType(extension: String): String = {
+    extension match {
+      case "css" => "text/css"
+      case "ico" => "image/vnd.microsoft.icon"
+      case "png" => "image/png"
+      case "svg" => "image/svg+xml"
+      case _ => ContentType.html.toString
+    }
+  }
 }
 
 object HttpHeaders {

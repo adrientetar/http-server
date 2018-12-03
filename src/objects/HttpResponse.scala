@@ -1,13 +1,14 @@
 package objects
 
-import java.io.{BufferedOutputStream, OutputStream}
+import java.io.{BufferedOutputStream, ByteArrayOutputStream, OutputStream}
 import java.net.{Socket, URI}
+import java.nio.charset.StandardCharsets
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 class HttpResponse(val uri: URI, val protocolVersion: String, val sock: Socket) {
-  private val _builder: StringBuilder = new StringBuilder
+  private val _out: ByteArrayOutputStream = new ByteArrayOutputStream()
   private var _frozen: Boolean = false
   private var _statusCode: Int = HttpStatus.ok
 
@@ -27,7 +28,7 @@ class HttpResponse(val uri: URI, val protocolVersion: String, val sock: Socket) 
 
     Future {
       val output = new BufferedOutputStream(sock.getOutputStream)
-      val msg = _builder.toString.getBytes
+      val msg = _out.toByteArray
 
       // Set content length
       headers.contentLength = msg.length
@@ -43,11 +44,13 @@ class HttpResponse(val uri: URI, val protocolVersion: String, val sock: Socket) 
     }
   }
 
-  def write(content: Object): Unit = {
+  def write(content: Array[Byte]): Unit = {
     _checkMutable()
 
-    // TODO: Encoding stuff here
-    _builder.append(content.toString)
+    _out.write(content)
+  }
+  def write(content: String): Unit = {
+    write(content.getBytes(StandardCharsets.UTF_8))
   }
 
   private def _checkMutable(freeze: Boolean = false): Unit = {
